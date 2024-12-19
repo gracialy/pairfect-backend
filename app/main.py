@@ -1,27 +1,88 @@
-from fastapi import FastAPI
-from app.core.config import init_firebase
-from app.api import auth, users
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from app.core.config import get_settings
+from app.core.firebase import get_firebase_manager
+from app.api import auth, users, developers
+import time
+from typing import Dict
+
+# Load settings
+settings = get_settings()
 
 # Initialize FastAPI app
-app = FastAPI(title="Hello World API with Auth")
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    version=settings.VERSION,
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
 
-# Initialize Firebase
-init_firebase()
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Replace with your frontend domain in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Initialize Firebase during startup
+@app.on_event("startup")
+async def startup_event():
+    """Initialize Firebase and other services on startup."""
+    try:
+        get_firebase_manager(settings.FIREBASE_CREDENTIALS_PATH)
+        print("Firebase initialized successfully")
+    except Exception as e:
+        raise RuntimeError(f"Error initializing Firebase: {e}")
+
+@app.middleware("http")
+async def add_timing_header(request: Request, call_next):
+    """Add response time header to all responses."""
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    response.headers["X-Process-Time"] = str(process_time)
+    return response
 
 # Include routers
-app.include_router(auth.router)
-app.include_router(users.router)
+app.include_router(auth.router, prefix=settings.API_V1_STR)
+app.include_router(users.router, prefix=settings.API_V1_STR)
+app.include_router(developers.router, prefix=settings.API_V1_STR)
 
-# Root endpoint
 @app.get("/")
-async def root():
-    return {"message": "Hello World"}
+async def root() -> Dict[str, str]:
+    """Root endpoint."""
+    return {
+        "message": "Welcome to FastAPI Firebase Auth API",
+        "version": settings.VERSION,
+        "docs_url": "/docs"
+    }
 
-# Health check endpoint
 @app.get("/health")
-async def health_check():
-    return {"status": "healthy"}
+async def health_check() -> Dict[str, str]:
+    """Health check endpoint."""
+    try:
+        # Fetch FirebaseManager instance
+        firebase_manager = get_firebase_manager(settings.FIREBASE_CREDENTIALS_PATH)
+        # Test Firestore connection
+        firebase_manager.db.collection('health_check').limit(1).stream()
+        return {
+            "status": "healthy",
+            "firebase": "connected"
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e)
+        }
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,  # Enable auto-reload for development
+        workers=1     # Single worker for development
+    )
