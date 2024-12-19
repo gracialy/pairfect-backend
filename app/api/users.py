@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from firebase_admin import auth
 from app.core.security import get_current_user
-from app.models.user import UserResponse
+from app.models.users import UserResponse
 
 router = APIRouter(prefix="/users", tags=["users"])
 

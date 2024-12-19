@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.core.firebase import get_firebase_manager
-from app.api import auth, users, developers
+from app.api import auth, users, developers, images
 import time
 from typing import Dict
 
@@ -49,6 +49,7 @@ async def add_timing_header(request: Request, call_next):
 app.include_router(auth.router, prefix=settings.API_V1_STR)
 app.include_router(users.router, prefix=settings.API_V1_STR)
 app.include_router(developers.router, prefix=settings.API_V1_STR)
+app.include_router(images.router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 async def root() -> Dict[str, str]:

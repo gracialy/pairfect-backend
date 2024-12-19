@@ -1,7 +1,7 @@
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from firebase_admin import auth
-from app.models.user import UserSignup, UserLogin
+from app.models.users import UserSignup, UserLogin
 from app.core.security import get_current_user
 from app.core.config import settings
 

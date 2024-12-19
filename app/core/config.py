@@ -16,6 +16,8 @@ class Settings(BaseSettings):
         "app/config/serviceAccountKey.json"
     )
     FIREBASE_API_KEY: str = os.getenv("FIREBASE_API_KEY")
+    # STORAGE_BUCKET: str
+    # GOOGLE_CLOUD_PROJECT: str
     
     class Config:
         case_sensitive = True

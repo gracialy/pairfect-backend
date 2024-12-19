@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 import uuid
 from datetime import datetime
-from app.core.security import get_current_user, get_api_key
+from httpx import request
+from app.core.security import get_current_user
 from app.core.config import get_settings
 from app.core.firebase import get_firebase_manager
 
@@ -15,7 +16,7 @@ def get_db():
 
 
 @router.post("/key-generation")
-async def create_api_key(current_user: dict = Depends(get_current_user)):
+def create_api_key(current_user: dict = Depends(get_current_user)):
     """Create a new API key for a developer."""
     db = get_db()
     api_key = str(uuid.uuid4())
@@ -30,7 +31,7 @@ async def create_api_key(current_user: dict = Depends(get_current_user)):
             'is_active': True,
             'metadata': {
                 'created_by': current_user.get('email'),
-                'ip_address': None  # Optional: Add request.client.host if needed
+                'ip_address': request.client.host
             }
         })
 
@@ -45,7 +46,7 @@ async def create_api_key(current_user: dict = Depends(get_current_user)):
         )
 
 @router.get("/api-keys")
-async def list_api_keys(current_user: dict = Depends(get_current_user)):
+def list_api_keys(current_user: dict = Depends(get_current_user)):
     """List all API keys for the current developer"""
     db = get_db()
     
@@ -67,8 +68,8 @@ async def list_api_keys(current_user: dict = Depends(get_current_user)):
             detail=f"Failed to list API keys: {str(e)}"
         )
 
-@router.delete("/api-key/{api_key}")
-async def revoke_api_key(api_key: str, current_user: dict = Depends(get_current_user)):
+@router.delete("/key-revokement/{api_key}")
+def revoke_api_key(api_key: str, current_user: dict = Depends(get_current_user)):
     """Revoke an API key"""
     db = get_db()
     
