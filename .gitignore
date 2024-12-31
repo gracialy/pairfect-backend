@@ -28,6 +28,9 @@ var/
 # Firebase
 app/config/serviceAccountKey.json
 
+# Vision AI
+app/config/SAKeyVision.json
+
 # IDE
 .idea/
 .vscode/

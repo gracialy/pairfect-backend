@@ -17,10 +17,11 @@ class FirebaseManager:
             try:
                 cred = credentials.Certificate(self.credentials_path)
                 firebase_admin.initialize_app(cred, {
-                    'storageBucket': f"{cred.project_id}.appspot.com"
+                    'storageBucket': f"{cred.project_id}.firebasestorage.app"
                 })
                 self._db = firestore.client()
                 self._bucket = storage.bucket()
+
             except Exception as e:
                 raise RuntimeError(f"Failed to initialize Firebase: {e}")
     

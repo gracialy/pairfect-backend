@@ -5,6 +5,7 @@ from httpx import request
 from app.core.security import get_current_user
 from app.core.config import get_settings
 from app.core.firebase import get_firebase_manager
+from app.models.api_keys import APIKeyRequest
 
 router = APIRouter(prefix="/developers", tags=["developers"])
 settings = get_settings()
@@ -16,22 +17,23 @@ def get_db():
 
 
 @router.post("/key-generation")
-def create_api_key(current_user: dict = Depends(get_current_user)):
+def create_api_key(request: APIKeyRequest, current_user: dict = Depends(get_current_user)):
     """Create a new API key for a developer."""
     db = get_db()
-    api_key = str(uuid.uuid4())
+    api_key = str(uuid.uuid4())  # Generate a unique API key
     
     try:
         # Store API key in Firestore
         doc_ref = db.collection('api_keys').document(api_key)
         doc_ref.set({
-            'user_id': current_user['uid'],
+            'user_id': current_user['uid'],  # Issuing user's ID
+            'client_id': request.client_id,  # Application or organization ID
             'created_at': datetime.utcnow(),
             'last_used': None,
             'is_active': True,
             'metadata': {
-                'created_by': current_user.get('email'),
-                'ip_address': request.client.host
+                'created_by': current_user.get('email'),  # Issuing user's email
+                'ip_address': request.client.host  # IP address of the user
             }
         })
 

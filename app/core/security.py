@@ -57,20 +57,38 @@ async def get_optional_user(token: str = Depends(oauth2_scheme_optional)):
     if not token:
         return None
     try:
-        return firebase_manager.verify_token(token)
+        # Dummy
+        return {
+            "uid": "dummy_uid",
+            "email": "dummy@example.com",
+            "name": "Dummy User"
+        }
+        # return firebase_manager.verify_token(token)
     except ValueError:
         return None
 
-async def get_optional_api_key(api_key: str = Security(api_key_header_optional)):
+async def get_optional_api_key(api_key: Optional[str] = Security(api_key_header)) -> Optional[dict]:
     if not api_key:
         return None
     try:
-        doc = firebase_manager.db.collection('api_keys').document(api_key).get()
-        if not doc.exists or not doc.to_dict().get("is_active"):
-            return None
-        return doc.to_dict()
-    except Exception:
-        return None
+        # Dummy
+        return {
+            "api_key_id": "",
+            "client_id": None 
+        }
+        # doc = firebase_manager.db.collection('api_keys').document(api_key).get()
+        # if not doc.exists:
+        #     raise HTTPException(status_code=401, detail="Invalid API Key")
+        # key_data = doc.to_dict()
+        # if not key_data.get("is_active"):
+        #     raise HTTPException(status_code=403, detail="API Key is inactive")
+        # return {
+        #     "api_key_id": api_key,
+        #     "client_id": key_data.get("client_id") 
+        # }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error validating API Key: {e}")
+
 
 async def get_auth(
     user: Optional[dict] = Depends(get_optional_user),
