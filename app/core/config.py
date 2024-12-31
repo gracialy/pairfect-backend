@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     )
     VISION_AI_LOCATION: str = os.getenv("VISION_AI_LOCATION", "us-central1")
     MAX_RESULTS: int = int(os.getenv("VISION_MAX_RESULTS", "3"))
+
+    # Custom Search settings
+    CUSTOM_SEARCH_API_KEY: str = os.getenv("CUSTOM_SEARCH_API_KEY")
+    CUSTOM_SEARCH_CX: str = os.getenv("CUSTOM_SEARCH_CX") 
     
     class Config:
         case_sensitive = True
@@ -37,6 +41,7 @@ def get_settings() -> Settings:
 
 # Validate environment variables during startup
 settings = get_settings()
+
 if not settings.FIREBASE_API_KEY:
     raise ValueError("FIREBASE_API_KEY environment variable is not set!")
 
@@ -45,3 +50,8 @@ if not os.path.exists(settings.FIREBASE_CREDENTIALS_PATH):
 
 if not os.path.exists(settings.VISION_CREDENTIALS_PATH):
     raise FileNotFoundError(f"Vision AI credentials file not found at: {settings.VISION_CREDENTIALS_PATH}")
+
+if not settings.CUSTOM_SEARCH_API_KEY:
+    raise ValueError("CUSTOM_SEARCH_API_KEY environment variable is not set!")
+if not settings.CUSTOM_SEARCH_CX:
+    raise ValueError("CUSTOM_SEARCH_CX environment variable is not set!")

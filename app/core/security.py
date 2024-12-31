@@ -73,7 +73,7 @@ async def get_optional_api_key(api_key: Optional[str] = Security(api_key_header)
     try:
         # Dummy
         return {
-            "api_key_id": "",
+            "api_key_id": "e98da495-b0bb-486a-bd57-6a8db4d71430",
             "client_id": None 
         }
         # doc = firebase_manager.db.collection('api_keys').document(api_key).get()
