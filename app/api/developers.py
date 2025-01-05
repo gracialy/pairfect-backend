@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Request
 import uuid
 from datetime import datetime
 from httpx import request
@@ -15,13 +15,12 @@ def get_db():
     firebase = get_firebase_manager(settings.FIREBASE_CREDENTIALS_PATH)
     return firebase.db
 
-
 @router.post("/key-generation")
-def create_api_key(request: APIKeyRequest, current_user: dict = Depends(get_current_user)):
+def create_api_key(request: APIKeyRequest, req: Request, current_user: dict = Depends(get_current_user)):
     """Create a new API key for a developer."""
     db = get_db()
     api_key = str(uuid.uuid4())  # Generate a unique API key
-    
+
     try:
         # Store API key in Firestore
         doc_ref = db.collection('api_keys').document(api_key)
@@ -33,7 +32,7 @@ def create_api_key(request: APIKeyRequest, current_user: dict = Depends(get_curr
             'is_active': True,
             'metadata': {
                 'created_by': current_user.get('email'),  # Issuing user's email
-                'ip_address': request.client.host  # IP address of the user
+                'ip_address': req.client.host  # IP address of the user
             }
         })
 

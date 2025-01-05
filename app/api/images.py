@@ -1,82 +1,19 @@
-from fastapi import APIRouter, Form, HTTPException, Depends, File, UploadFile
+from fastapi import APIRouter, File, UploadFile, Form, Depends, HTTPException
 from app.core.security import get_auth
-from app.models.images import ImageAnalysisResult, ImagePairingResult
-from app.services.image_service import ImageService, get_image_service
-from datetime import datetime
+from app.services.pairing_service import PairingService, get_pairing_service
+from typing import Dict
 
 router = APIRouter(prefix="/images", tags=["images"])
 
-@router.post("/analyze", response_model=ImageAnalysisResult)
-async def hybrid_analyze_image(
-    image: UploadFile = File(...),
-    auth: dict = Depends(get_auth),
-    image_service: ImageService = Depends(get_image_service)
-):
-    """
-    Analyze an uploaded image using Google Cloud Vision AI and store results
-    """
-    if not image.content_type.startswith('image/'):
-        raise HTTPException(status_code=400, detail="File must be an image")
-
-    try:
-        # Read image content
-        content = await image.read()
-        
-        # Store image
-        blob_path = "dummy"
-        analysis_id = "dummy"
-        # blob_path, analysis_id = await image_service.store_image(
-        #     content, 
-        #     image.filename, 
-        #     image.content_type
-        # )
-        
-        # Analyze image
-        analysis_result = await image_service.analyze_image(content)
-        # analysis_result = {
-        #     'labels': [
-        #         {
-        #             'description': 'dummy',
-        #             'score': 0.0,
-        #             'confidence': 0.0,
-        #             'topicality': 0.0
-        #         }
-        #     ]
-        # }
-        
-        # Store analysis record
-        timestamp = datetime.utcnow()
-        # timestamp = await image_service.store_analysis_record(
-        #     analysis_id=analysis_id,
-        #     blob_path=blob_path,
-        #     filename=image.filename,
-        #     content_type=image.content_type,
-        #     analysis_result=analysis_result,
-        #     auth=auth
-        # )
-        
-        return ImageAnalysisResult(
-            id=analysis_id,
-            timestamp=timestamp,
-            image_url=f"/storage/{blob_path}",
-            analysis=analysis_result
-        )
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error processing image: {str(e)}"
-        )
-    
-@router.post("/pair", response_model=ImagePairingResult)
-async def pair_image(
+@router.post("/pair")
+async def pair_images(
     image: UploadFile = File(...),
     keyword: str = Form(...),
     auth: dict = Depends(get_auth),
-    image_service: ImageService = Depends(get_image_service)
+    pairing_service: PairingService = Depends(get_pairing_service)
 ):
     """
-    Find and analyze a matching image from the web based on the uploaded image and keyword
+    Pair an uploaded image with a web image based on Vision AI analysis and keyword.
     """
     if not image.content_type.startswith('image/'):
         raise HTTPException(status_code=400, detail="File must be an image")
@@ -85,34 +22,31 @@ async def pair_image(
         # Read image content
         content = await image.read()
         
-        # Store original image
-        blob_path = "dummy"
-        analysis_id = "dummy"
-        # blob_path, analysis_id = await image_service.store_image(
-        #     content, 
-        #     image.filename, 
-        #     image.content_type
-        # )
+        # Get image labels from Vision AI
+        labels = await pairing_service.analyze_image(content)
+
+        print(labels)
         
-        # Perform pairing analysis
-        analysis_result = await image_service.pair_images(content, keyword)
+        # Combine keyword with labels for search
+        search_term = f"{keyword} {' '.join(labels)}"
+
+        print(search_term)
         
-        # Store analysis record
-        timestamp = await image_service.store_analysis_record(
-            analysis_id=analysis_id,
-            blob_path=blob_path,
-            filename=image.filename,
-            content_type=image.content_type,
-            analysis_result=analysis_result,
+        # Search for matching image
+        result_image_url = await pairing_service.search_image(search_term)
+
+        print(result_image_url)
+        
+        # Store pairing record
+        result = pairing_service.store_pairing_record(
+            original_image_content=content,
+            keyword=keyword,
+            labels=labels,
+            result_image_url=result_image_url,
             auth=auth
         )
         
-        return ImagePairingResult(
-            id=analysis_id,
-            timestamp=timestamp,
-            image_url=f"/storage/{blob_path}",
-            analysis=analysis_result
-        )
+        return result
         
     except Exception as e:
         raise HTTPException(

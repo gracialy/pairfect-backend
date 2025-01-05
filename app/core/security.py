@@ -71,21 +71,16 @@ async def get_optional_api_key(api_key: Optional[str] = Security(api_key_header)
     if not api_key:
         return None
     try:
-        # Dummy
+        doc = firebase_manager.db.collection('api_keys').document(api_key).get()
+        if not doc.exists:
+            raise HTTPException(status_code=401, detail="Invalid API Key")
+        key_data = doc.to_dict()
+        if not key_data.get("is_active"):
+            raise HTTPException(status_code=403, detail="API Key is inactive")
         return {
-            "api_key_id": "e98da495-b0bb-486a-bd57-6a8db4d71430",
-            "client_id": None 
+            "api_key_id": api_key,
+            "client_id": key_data.get("client_id") 
         }
-        # doc = firebase_manager.db.collection('api_keys').document(api_key).get()
-        # if not doc.exists:
-        #     raise HTTPException(status_code=401, detail="Invalid API Key")
-        # key_data = doc.to_dict()
-        # if not key_data.get("is_active"):
-        #     raise HTTPException(status_code=403, detail="API Key is inactive")
-        # return {
-        #     "api_key_id": api_key,
-        #     "client_id": key_data.get("client_id") 
-        # }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error validating API Key: {e}")
 

@@ -55,3 +55,11 @@ if not settings.CUSTOM_SEARCH_API_KEY:
     raise ValueError("CUSTOM_SEARCH_API_KEY environment variable is not set!")
 if not settings.CUSTOM_SEARCH_CX:
     raise ValueError("CUSTOM_SEARCH_CX environment variable is not set!")
+
+print(f"DEBUG: FIREBASE_API_KEY = {settings.FIREBASE_API_KEY}")
+print(f"DEBUG: FIREBASE_CREDENTIALS_PATH = {settings.FIREBASE_CREDENTIALS_PATH}")
+print(f"DEBUG: VISION_CREDENTIALS_PATH = {settings.VISION_CREDENTIALS_PATH}")
+print(f"DEBUG: CUSTOM_SEARCH_API_KEY = {settings.CUSTOM_SEARCH_API_KEY}")
+print(f"DEBUG: CUSTOM_SEARCH_CX = {settings.CUSTOM_SEARCH_CX}")
+print(f"DEBUG: STORAGE_BUCKET = {settings.STORAGE_BUCKET}")
+print(f"DEBUG: GOOGLE_CLOUD_PROJECT = {settings.GOOGLE_CLOUD_PROJECT}")
