@@ -31,33 +31,18 @@ async def pair_images(
 
         # Analyze the original image 
         original_labels, original_colors, original_faces = await pairing_service.analyze_image(content, include_faces)
-
-        print(f"Labels: {original_labels}")
-        print(f"Colors: {original_colors}")
-        print(f"Faces: {original_faces}")
         
-        # # Combine keyword with labels, colors, and faces for search
+        # Combine keyword with labels, colors, and faces for search
         search_term = pairing_service.build_search_term(keyword, original_labels, original_colors)
-
-        print(f"Search term: {search_term}")
         
         # Search for matching image
         result_image_url = await pairing_service.search_image(search_term)
 
-        print(f"Result image URL: {result_image_url}")
-
         # Store the image to Firebase Storage
-        original_uri, result_uri   = await pairing_service.store_image_to_storage(content, result_image_url)
-
-        print(f"Original image URI: {original_uri}")
-        print(f"Result image URI: {result_uri}")
+        original_uri, result_uri = await pairing_service.store_image_to_storage(content, result_image_url)
 
         # Get result's labels, colors, and faces
         result_labels, result_colors, result_faces = await pairing_service.analyze_image_from_uri(result_uri, include_faces)
-
-        print(f"Result Labels: {result_labels}")
-        print(f"Result Colors: {result_colors}")
-        print(f"Result Faces: {result_faces}")
 
         # Calculate percentage match
         percentage_match = pairing_service.calculate_percentage_match(
@@ -68,6 +53,8 @@ async def pair_images(
             result_colors=result_colors,
             result_faces=result_faces
         )
+
+        print(f"Percentage match: {percentage_match}")
                  
         # Store pairing record
         result = pairing_service.store_pairing_record(

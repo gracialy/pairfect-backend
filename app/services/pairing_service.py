@@ -1,4 +1,5 @@
 from datetime import datetime
+import json
 import uuid
 from typing import Tuple, List, Dict
 import aiohttp
@@ -8,6 +9,7 @@ from app.core.firebase import get_firebase_manager
 from app.core.vision import get_vision_manager
 from functools import lru_cache
 import random
+from google.cloud.firestore_v1 import SERVER_TIMESTAMP
 
 class PairingService:
     def __init__(self):
@@ -202,7 +204,11 @@ class PairingService:
             )
             for color in colors
         ]
-        return list(set(keywords))  # Deduplicate keywords
+
+        # Deduplicate keywords
+        result = list(set(keywords))
+
+        return result
 
     async def search_image(self, search_term: str) -> str:
         """Search for image using Google Custom Search."""
@@ -309,10 +315,23 @@ class PairingService:
         auth: dict
     ) -> Dict:
         """Store pairing record in Firestore."""
+        def make_serializable(data):
+            """Recursively convert data to be JSON serializable."""
+            if isinstance(data, list):
+                return [PairingService.make_serializable(item) for item in data]
+            elif isinstance(data, dict):
+                return {key: PairingService.make_serializable(value) for key, value in data.items()}
+            elif isinstance(data, float):
+                return round(data, 6)  # Limit float precision 
+            elif isinstance(data, (int, str, bool)) or data is None:
+                return data
+            else:
+                raise TypeError(f"Unsupported type: {type(data)} - {data}")
+
         try:
             pairing_id = str(uuid.uuid4())
-            timestamp = datetime.now(datetime.timezone.utc)
-            
+            timestamp = SERVER_TIMESTAMP
+
             record = {
                 'id': pairing_id,
                 'timestamp': timestamp,
@@ -331,14 +350,8 @@ class PairingService:
             # Add auth-specific data
             if 'api_key_id' in auth:
                 record.update({
-                    'api_key_id': auth['api_key_id'],
+                    'api_key_id': auth.get('api_key_id'),
                     'client_id': auth.get('client_id'),
-                })
-                # Update API usage statistics
-                api_key_ref = self.firebase.db.collection('api_keys').document(auth['api_key_id'])
-                api_key_ref.update({
-                    'last_used': timestamp,
-                    'total_requests': 1
                 })
             else:
                 record.update({
@@ -351,7 +364,16 @@ class PairingService:
             
             return {
                 'id': pairing_id,
-                'timestamp': timestamp,
+                'original_image_uri': original_image_uri,
+                'original_keyword': original_keyword,
+                'result_image_uri': result_image_uri,
+                'original_labels': original_labels,
+                'original_colors': original_colors,
+                'original_faces': original_faces,
+                'result_labels': result_labels,
+                'result_colors': result_colors,
+                'result_faces': result_faces,
+                'percentage_match': percentage_match
             }
             
         except Exception as e:
@@ -381,12 +403,15 @@ class PairingService:
         else: color_match = self.calculate_color_match(original_colors, result_colors)
         
         # Calculate face match percentage
-        if not original_faces and not result_faces:
-            face_match = 1.0
-        else: face_match = self.calculate_face_match(original_faces, result_faces)
+        # if not original_faces and not result_faces:
+        #     face_match = 1.0
+        # else: face_match = self.calculate_face_match(original_faces, result_faces)
+        face_match = 1.0
         
         # Calculate total match percentage
-        return (label_match + color_match + face_match) / 3
+        percentage = (label_match + color_match + face_match) / 3
+
+        return percentage
 
 
     def calculate_label_match(self, original_labels: List[Dict], result_labels: List[Dict]) -> float:
@@ -398,38 +423,45 @@ class PairingService:
         if not original_set:  # Avoid division by zero
             return 0.0
         common_labels = original_set.intersection(result_set)
+
+        percentage = len(common_labels) / len(original_set)
+
+        print("Percentage label: ", percentage)
         
-        return len(common_labels) / len(original_set)
+        return percentage
     
     def calculate_color_match(self, original_colors: List[Dict], result_colors: List[Dict]) -> float:
         """Identify common colors percentage."""
-        original_set = set(color['color'] for color in original_colors)
-        result_set = set(color['color'] for color in result_colors)
         
         # Convert RGB to color keywords for comparison
-        original_keywords = set(self.map_colors_to_keywords([{'color': color} for color in original_set]))
-        result_keywords = set(self.map_colors_to_keywords([{'color': color} for color in result_set]))
+        original_keywords = self.map_colors_to_keywords(original_colors)
+        result_keywords = self.map_colors_to_keywords(result_colors)
         
         # Handle empty case
         if not original_keywords:
             return 0.0
-        common_colors = original_keywords.intersection(result_keywords)
         
-        return len(common_colors) / len(original_set)
+        # Find common colors
+        common_colors = []
+        for original_color in original_keywords:
+            if original_color in result_keywords:
+                common_colors.append(original_color)
+
+        print("Percentage color: ", len(common_colors) / len(original_keywords))
+        
+        return len(common_colors) / len(original_keywords)
     
     def calculate_face_match(self, original_faces: List[Dict], result_faces: List[Dict]) -> float:
         """Calculate face match percentage."""
         original_set = set((face['roll_angle'], face['tilt_angle'], face['pan_angle']) for face in original_faces)
         result_set = set((face['roll_angle'], face['tilt_angle'], face['pan_angle']) for face in result_faces)
         
-        # if any of them is empty
-        if not original_set:
-            return 0.0
-        if not result_set:
+        # Handle empty sets
+        if not original_set or not result_set:
             return 0.0
         
-        # Calculate roll, tilt and pan similarity
-        max_similarity = 0.0
+        # Calculate roll, tilt, and pan similarity
+        total_similarity = 0.0
         for original_face in original_set:
             face_similarities = []
             for result_face in result_set:
@@ -437,13 +469,17 @@ class PairingService:
                 tilt_diff = abs(original_face[1] - result_face[1])
                 pan_diff = abs(original_face[2] - result_face[2])
                 # Calculate similarity score (1 - normalized difference)
-                similarity = 1.0 - (roll_diff + tilt_diff + pan_diff) / 180.0
+                similarity = 1.0 - ((roll_diff + tilt_diff + pan_diff) / 180.0)
                 face_similarities.append(max(0.0, similarity))
             if face_similarities:
-                max_similarity += max(face_similarities)
+                total_similarity += max(face_similarities)
         
         # Return average similarity normalized by number of faces in original image
-        return max_similarity / len(original_set) if original_set else 0.0
+        percentage = total_similarity / len(original_set)
+
+        print("Percentage face: ", percentage)
+
+        return percentage
 
 @lru_cache()
 def get_pairing_service() -> PairingService:
