@@ -27,12 +27,13 @@ class FirebaseManager:
         if not firebase_admin._apps:
             try:
                 cred = credentials.Certificate(self.credentials_path)
-                # Changed .firebasestorage.app to .appspot.com
+                # GOOGLE FIREBASE STORAGE BUCKET USE firebasestorage.app DONT LET GCS FOOL YOU AAAAAAAAAAAAAAAAARGHHHHHHHHHH
                 firebase_admin.initialize_app(cred, {
-                    'storageBucket': f"{cred.project_id}.appspot.com"
+                    'storageBucket': f"{cred.project_id}.firebasestorage.app"
                 })
                 self._db = firestore.client()
                 self._bucket = storage.bucket()
+
             except Exception as e:
                 raise RuntimeError(f"Failed to initialize Firebase: {str(e)}")
     

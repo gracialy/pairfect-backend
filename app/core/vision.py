@@ -26,27 +26,11 @@ class VisionAIManager:
             raise RuntimeError("Vision AI client is not initialized.")
         return self._client
     
-    async def detect_labels(
-        self, 
-        image_content: bytes, 
-        max_results: int = 3
-    ) -> List[vision.EntityAnnotation]:
-        """
-        Detect labels in an image using Vision AI.
-        
-        Args:
-            image_content: Bytes of the image content
-            max_results: Maximum number of labels to return
-            
-        Returns:
-            List of detected labels with their scores
-        """
+    async def detect_labels(self, image_content: bytes) -> List[vision.EntityAnnotation]:
+        """Detect labels in an image"""
         try:
             image = vision.Image(content=image_content)
-            response = self.client.label_detection(
-                image=image,
-                max_results=max_results
-            )
+            response = self.client.label_detection(image=image)
             
             if response.error.message:
                 raise Exception(
@@ -57,6 +41,79 @@ class VisionAIManager:
             
         except Exception as e:
             raise RuntimeError(f"Label detection failed: {e}")
+        
+    async def detect_image_properties(self, image_content: bytes) -> vision.ImageProperties:
+        """Detect image properties, including dominant colors."""
+        try:
+            image = vision.Image(content=image_content)
+            response = self.client.image_properties(image=image)
+
+            if response.error.message:
+                raise Exception(f"Vision AI image properties detection failed: {response.error.message}")
+        
+            return response.image_properties_annotation
+        
+        except Exception as e:
+            raise RuntimeError(f"Image properties detection failed: {e}")
+        
+    async def detect_faces(self, image_content: bytes) -> List[vision.FaceAnnotation]:
+        """Detect faces in an image."""
+        try:
+            image = vision.Image(content=image_content)
+            response = self.client.face_detection(image=image)
+            
+            if response.error.message:
+                raise Exception(f"Face detection failed: {response.error.message}")
+            
+            return response.face_annotations
+        
+        except Exception as e:
+            raise RuntimeError(f"Face detection failed: {e}")
+        
+    async def detect_labels_from_uri(self, image_uri: str) -> List[vision.EntityAnnotation]:
+        """Detect labels in an image from a URI."""
+        try:
+            image = vision.Image()
+            image.source.image_uri = image_uri
+            response = self.client.label_detection(image=image)
+            
+            if response.error.message:
+                raise Exception(f"Error detecting labels: {response.error.message}")
+            
+            return response.label_annotations
+        
+        except Exception as e:
+            raise RuntimeError(f"Label detection failed: {e}")
+        
+    async def detect_image_properties_from_uri(self, image_uri: str) -> vision.ImageProperties:
+        """Detect image properties from a URI."""
+        try:
+            image = vision.Image()
+            image.source.image_uri = image_uri
+            response = self.client.image_properties(image=image)
+            
+            if response.error.message:
+                raise Exception(f"Image properties detection failed: {response.error.message}")
+            
+            return response.image_properties_annotation
+        
+        except Exception as e:
+            raise RuntimeError(f"Image properties detection failed: {e}")
+        
+    async def detect_faces_from_uri(self, image_uri: str) -> List[vision.FaceAnnotation]:
+        """Detect faces in an image from a URI."""
+        try:
+            image = vision.Image()
+            image.source.image_uri = image_uri
+            response = self.client.face_detection(image=image)
+            
+            if response.error.message:
+                raise Exception(f"Face detection failed: {response.error.message}")
+            
+            return response.face_annotations
+        
+        except Exception as e:
+            raise RuntimeError(f"Face detection failed: {e}")
 
 @lru_cache()
 def get_vision_manager(
