@@ -1,35 +1,15 @@
 from pydantic import BaseModel
-from datetime import datetime
-from typing import List
+from typing import Optional
 
-class Label(BaseModel):
-    description: str
-    score: float
-    confidence: float
-    topicality: float
+class PairImagesRequest(BaseModel):
+    keyword: str
+    include_faces: Optional[bool] = False  
 
-class Analysis(BaseModel):
-    labels: List[Label]
+class EncryptImageRequest(BaseModel):
+    text: str
+    sensitivity: Optional[str] = "medium"  
 
-class ImageAnalysisResult(BaseModel):
-    id: str
-    timestamp: datetime
-    image_url: str
-    analysis: Analysis
-
-class PairedImageAnalysis(BaseModel):
-    url: str
-    analysis: Analysis
-
-class Compatibility(BaseModel):
-    score: float
-    common_elements: List[str]
-    unique_elements1: List[str]
-    unique_elements2: List[str]
-    confidence: float
-
-class ImagePairingResult(BaseModel):
-    id: str
-    timestamp: datetime
-    image_url: str
-    analysis: dict
+class DecryptImageRequest(BaseModel):
+    key_id: str
+    cipher_text: str
+    iv: str

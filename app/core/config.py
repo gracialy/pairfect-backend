@@ -16,8 +16,8 @@ class Settings(BaseSettings):
         "app/config/serviceAccountKey.json"
     )
     FIREBASE_API_KEY: str = os.getenv("FIREBASE_API_KEY")
-    STORAGE_BUCKET: str
-    GOOGLE_CLOUD_PROJECT: str
+    STORAGE_BUCKET: str = os.getenv("STORAGE_BUCKET")
+    GOOGLE_CLOUD_PROJECT: str = os.getenv("GOOGLE_CLOUD_PROJECT")
 
     # Vision AI settings
     VISION_CREDENTIALS_PATH: str = os.getenv(
@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     # Custom Search settings
     CUSTOM_SEARCH_API_KEY: str = os.getenv("CUSTOM_SEARCH_API_KEY")
     CUSTOM_SEARCH_CX: str = os.getenv("CUSTOM_SEARCH_CX") 
+
+    # Peers API Integration
+    FURINA_API_KEY: str = os.getenv("FURINA_API_KEY")
     
     class Config:
         case_sensitive = True
@@ -55,6 +58,15 @@ if not settings.CUSTOM_SEARCH_API_KEY:
     raise ValueError("CUSTOM_SEARCH_API_KEY environment variable is not set!")
 if not settings.CUSTOM_SEARCH_CX:
     raise ValueError("CUSTOM_SEARCH_CX environment variable is not set!")
+
+if not settings.STORAGE_BUCKET:
+    raise ValueError("STORAGE_BUCKET environment variable is not set!")
+if not settings.GOOGLE_CLOUD_PROJECT:
+    raise ValueError("GOOGLE_CLOUD_PROJECT environment variable is not set!")
+
+if not settings.FURINA_API_KEY:
+    raise ValueError("FURINA_API_KEY environment variable is not set!")
+
 
 print(f"DEBUG: FIREBASE_API_KEY = {settings.FIREBASE_API_KEY}")
 print(f"DEBUG: FIREBASE_CREDENTIALS_PATH = {settings.FIREBASE_CREDENTIALS_PATH}")
