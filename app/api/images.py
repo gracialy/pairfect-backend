@@ -82,8 +82,8 @@ async def pair_images(
         )
     
 # Integration with External API
-ENCRYPT_API_URL = "https://api.codebloop.my.id/api/encrypt"
-DECRYPT_API_URL = "https://api.codebloop.my.id/api/decrypt"
+ENCRYPT_API_URL = "https://furina-encryption-service.codebloop.my.id/api/encrypt"
+DECRYPT_API_URL = "https://furina-encryption-service.codebloop.my.id/api/decrypt"
 
 # Convert Image to Base64
 def image_to_base64(file: UploadFile):
