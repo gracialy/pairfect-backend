@@ -6,7 +6,6 @@ class PairImagesBody(BaseModel):
     include_faces: Optional[bool] = False  
 
 class EncryptImageBody(BaseModel):
-    text: str
     sensitivity: Optional[str] = "medium"  
 
 class DecryptImageBody(BaseModel):

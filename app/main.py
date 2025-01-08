@@ -32,7 +32,6 @@ async def startup_event():
     """Initialize Firebase and other services on startup."""
     try:
         get_firebase_manager(settings.FIREBASE_CREDENTIALS_PATH)
-        print(f"Project ID from service account: {get_firebase_manager(settings.FIREBASE_CREDENTIALS_PATH)._db.project}")
     except Exception as e:
         raise RuntimeError(f"Error initializing Firebase: {e}")
 
