@@ -2,7 +2,7 @@ import uuid
 from fastapi import APIRouter, File, UploadFile, Form, Depends, HTTPException
 from app.core.security import get_auth
 from app.services.pairing_service import PairingService, get_pairing_service
-from app.models.images import PairImagesRequest, EncryptImageRequest, DecryptImageRequest
+from app.models.images import PairImagesBody, EncryptImageBody, DecryptImageBody
 from typing import Dict
 import base64
 import json
@@ -15,7 +15,7 @@ router = APIRouter(prefix="/images", tags=["images"])
 @router.post("/pair")
 async def pair_images(
     image: UploadFile = File(...),
-    request: PairImagesRequest = Depends(),
+    body: PairImagesBody = Depends(),
     auth: dict = Depends(get_auth),
     pairing_service: PairingService = Depends(get_pairing_service)
 ):
@@ -33,10 +33,10 @@ async def pair_images(
         original_labels, original_colors, original_faces = [], [], []
 
         # Analyze the original image 
-        original_labels, original_colors, original_faces = await pairing_service.analyze_image(content, request.include_faces)
+        original_labels, original_colors, original_faces = await pairing_service.analyze_image(content, body.include_faces)
         
         # Combine keyword with labels, colors, and faces for search
-        search_term = pairing_service.build_search_term(request.keyword, original_labels, original_colors)
+        search_term = pairing_service.build_search_term(body.keyword, original_labels, original_colors)
         
         # Search for matching image
         result_image_url = await pairing_service.search_image(search_term)
@@ -45,7 +45,7 @@ async def pair_images(
         original_uri, result_uri = await pairing_service.store_image_to_storage(content, result_image_url)
 
         # Get result's labels, colors, and faces
-        result_labels, result_colors, result_faces = await pairing_service.analyze_image_from_uri(result_uri, request.include_faces)
+        result_labels, result_colors, result_faces = await pairing_service.analyze_image_from_uri(result_uri, body.include_faces)
 
         # Calculate percentage match
         percentage_match = pairing_service.calculate_percentage_match(
@@ -60,7 +60,7 @@ async def pair_images(
         # Store pairing record
         result = pairing_service.store_pairing_record(
             original_image_uri=original_uri,
-            original_keyword=request.keyword,
+            original_keyword=body.keyword,
             result_image_uri=result_uri,
             original_labels=original_labels,
             original_colors=original_colors,
@@ -127,7 +127,7 @@ async def encrypt_image_api(
 
 @router.post("/decrypt-image")
 async def decrypt_image_api(
-    request: DecryptImageRequest,
+    body: DecryptImageBody,
     auth: dict = Depends(get_auth),
 ):
     """
@@ -139,9 +139,9 @@ async def decrypt_image_api(
 
         # Call external decryption API
         payload = {
-            "key_id": request.key_id,
-            "cipher_text": request.cipher_text,
-            "iv": request.iv
+            "key_id": body.key_id,
+            "cipher_text": body.cipher_text,
+            "iv": body.iv
         }
         headers = {
             "accept": "application/json",

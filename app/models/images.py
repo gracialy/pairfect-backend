@@ -1,15 +1,15 @@
 from pydantic import BaseModel
 from typing import Optional
 
-class PairImagesRequest(BaseModel):
+class PairImagesBody(BaseModel):
     keyword: str
     include_faces: Optional[bool] = False  
 
-class EncryptImageRequest(BaseModel):
+class EncryptImageBody(BaseModel):
     text: str
     sensitivity: Optional[str] = "medium"  
 
-class DecryptImageRequest(BaseModel):
+class DecryptImageBody(BaseModel):
     key_id: str
     cipher_text: str
     iv: str
