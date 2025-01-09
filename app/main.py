@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.core.firebase import get_firebase_manager
+from app.core.vision import get_vision_manager
 from app.api import api_keys, sessions, users, images
 import time
 from typing import Dict
@@ -20,7 +21,7 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Replace with your frontend domain in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -29,15 +30,20 @@ app.add_middleware(
 # Initialize Firebase during startup
 @app.on_event("startup")
 async def startup_event():
-    """Initialize Firebase and other services on startup."""
+    """
+    Initialize Firebase and other services on startup.
+    """
     try:
         get_firebase_manager(settings.FIREBASE_CREDENTIALS_PATH)
+        get_vision_manager(settings.VISION_CREDENTIALS_PATH)
     except Exception as e:
         raise RuntimeError(f"Error initializing Firebase: {e}")
 
 @app.middleware("http")
 async def add_timing_header(request: Request, call_next):
-    """Add response time header to all responses."""
+    """
+    Add response time header to all responses.
+    """
     start_time = time.time()
     response = await call_next(request)
     process_time = time.time() - start_time

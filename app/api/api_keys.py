@@ -5,7 +5,11 @@ from httpx import request
 from app.core.security import get_current_user
 from app.core.config import get_settings
 from app.core.firebase import get_firebase_manager
-from app.models.api_keys import APIKeyRequest
+from pydantic import BaseModel
+
+class APIKeyRequest(BaseModel):
+    client_id: str  # The ID of the client (app or organization)
+
 
 router = APIRouter(prefix="/api-keys", tags=["api-keys"])
 settings = get_settings()
@@ -17,7 +21,9 @@ def get_db():
 
 @router.post("")
 def create_api_key(request: APIKeyRequest, req: Request, current_user: dict = Depends(get_current_user)):
-    """Create a new API key for a developer."""
+    """
+    Create a new API key for a developer.
+    """
     db = get_db()
     api_key = str(uuid.uuid4())  # Generate a unique API key
 
@@ -48,7 +54,9 @@ def create_api_key(request: APIKeyRequest, req: Request, current_user: dict = De
 
 @router.delete("/{api_key}")
 def revoke_api_key(api_key: str, current_user: dict = Depends(get_current_user)):
-    """Revoke an API key"""
+    """
+    Revoke an API key
+    """
     db = get_db()
     
     try:

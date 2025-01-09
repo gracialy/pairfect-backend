@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 import json
 import uuid
@@ -267,33 +268,40 @@ class PairingService:
         content: bytes, 
         result_image_url: str
     ) -> Tuple[str, str]:
-        """Store original and pair image to Firebase Storage."""
+        """Store original and pair image to Firebase Storage concurrently."""
         original_image_id = str(uuid.uuid4())
         result_image_id = str(uuid.uuid4())
 
         try:
             bucket = self.firebase.storage
 
-            # Store original image
-            original_blob = bucket.blob(f"originals/{original_image_id}.jpg")
-            original_blob.upload_from_string(content, content_type='image/jpeg')
-            original_blob.make_public()
+            async def store_original():
+                original_blob = bucket.blob(f"originals/{original_image_id}.jpg")
+                original_blob.upload_from_string(content, content_type='image/jpeg')
+                original_blob.make_public()
+                return original_blob.public_url
 
-            # Store result image
-            async with aiohttp.ClientSession() as session:
-                async with session.get(result_image_url) as response:
-                    if response.status != 200:
-                        raise HTTPException(
-                            status_code=500,
-                            detail=f"Failed to download result image: {await response.text()}"
-                        )
+            async def store_result():
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(result_image_url) as response:
+                        if response.status != 200:
+                            raise HTTPException(
+                                status_code=500,
+                                detail=f"Failed to download result image: {await response.text()}"
+                            )
+                        result_image_content = await response.read()
+                        result_blob = bucket.blob(f"results/{result_image_id}.jpg")
+                        result_blob.upload_from_string(result_image_content, content_type='image/jpeg')
+                        result_blob.make_public()
+                        return result_blob.public_url
 
-                    result_image_content = await response.read()
-                    result_blob = bucket.blob(f"results/{result_image_id}.jpg")
-                    result_blob.upload_from_string(result_image_content, content_type='image/jpeg')
-                    result_blob.make_public()
+            # Run both storage operations concurrently
+            original_url, result_url = await asyncio.gather(
+                store_original(),
+                store_result()
+            )
 
-            return original_blob.public_url, result_blob.public_url
+            return original_url, result_url
 
         except Exception as e:
             raise HTTPException(
@@ -425,8 +433,6 @@ class PairingService:
         common_labels = original_set.intersection(result_set)
 
         percentage = len(common_labels) / len(original_set)
-
-        print("Percentage label: ", percentage)
         
         return percentage
     
@@ -446,8 +452,6 @@ class PairingService:
         for original_color in original_keywords:
             if original_color in result_keywords:
                 common_colors.append(original_color)
-
-        print("Percentage color: ", len(common_colors) / len(original_keywords))
         
         return len(common_colors) / len(original_keywords)
     
@@ -476,8 +480,6 @@ class PairingService:
         
         # Return average similarity normalized by number of faces in original image
         percentage = total_similarity / len(original_set)
-
-        print("Percentage face: ", percentage)
 
         return percentage
 

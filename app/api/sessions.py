@@ -1,14 +1,18 @@
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from firebase_admin import auth
-from app.models.users import UserSignup, UserLogin
 from app.core.security import get_current_user
 from app.core.config import settings
+from pydantic import BaseModel, EmailStr
+
+class SessionBody(BaseModel):
+    email: EmailStr
+    password: str
 
 router = APIRouter(prefix="/session", tags=["sessions"])
     
 @router.post("")
-async def login(user: UserLogin):
+async def login(user: SessionBody):
     url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={settings.FIREBASE_API_KEY}"
     payload = {
         "email": user.email,
@@ -27,17 +31,17 @@ async def login(user: UserLogin):
 
     result = response.json()
     return {
-        "message": "Login successful",
         "id_token": result["idToken"],
-        "refresh_token": result["refreshToken"],
         "expires_in": result["expiresIn"]
     }
 
 @router.delete("")
-async def logout(current_user: dict = Depends(get_current_user)):
+async def logout(current_user: dict = Depends(get_current_user), status_code=status.HTTP_204_NO_CONTENT):
     try:
         auth.revoke_refresh_tokens(current_user['uid'])
-        return {"message": "Successfully logged out"}
+        return {
+            "message": "Session deleted successfully"
+        }
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
