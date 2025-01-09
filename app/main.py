@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.core.firebase import get_firebase_manager
-from app.api import auth, users, developers, images
+from app.api import api_keys, sessions, users, images
 import time
 from typing import Dict
 
@@ -45,37 +45,10 @@ async def add_timing_header(request: Request, call_next):
     return response
 
 # Include routers
-app.include_router(auth.router, prefix=settings.API_V1_STR)
 app.include_router(users.router, prefix=settings.API_V1_STR)
-app.include_router(developers.router, prefix=settings.API_V1_STR)
+app.include_router(sessions.router, prefix=settings.API_V1_STR)
+app.include_router(api_keys.router, prefix=settings.API_V1_STR)
 app.include_router(images.router, prefix=settings.API_V1_STR)
-
-@app.get("/")
-async def root() -> Dict[str, str]:
-    """Root endpoint."""
-    return {
-        "message": "Welcome to FastAPI Firebase Auth API",
-        "version": settings.VERSION,
-        "docs_url": "/docs"
-    }
-
-@app.get("/health")
-async def health_check() -> Dict[str, str]:
-    """Health check endpoint."""
-    try:
-        # Fetch FirebaseManager instance
-        firebase_manager = get_firebase_manager(settings.FIREBASE_CREDENTIALS_PATH)
-        # Test Firestore connection
-        firebase_manager.db.collection('health_check').limit(1).stream()
-        return {
-            "status": "healthy",
-            "firebase": "connected"
-        }
-    except Exception as e:
-        return {
-            "status": "unhealthy",
-            "error": str(e)
-        }
 
 if __name__ == "__main__":
     import uvicorn
@@ -84,5 +57,5 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8000,
         reload=False,  
-        workers=1     # Single worker for development
+        workers=5
     )

@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 
 router = APIRouter(prefix="/images", tags=["images"])
 
-@router.post("/pair")
+@router.post("/pairs")
 async def pair_images(
     image: UploadFile = File(...),
     keyword: str = Form(...),    
@@ -90,7 +90,7 @@ DECRYPT_API_URL = "https://furina-encryption-service.codebloop.my.id/api/decrypt
 def image_to_base64(file: UploadFile):
     return base64.b64encode(file.file.read()).decode("utf-8")
 
-@router.post("/encrypt")
+@router.post("/encryptions")
 async def encrypt_image_api(
     image: UploadFile, 
     sensitivity: str = Form("medium"),
@@ -128,7 +128,7 @@ async def encrypt_image_api(
     except Exception as e:
         return {"error": str(e)}
 
-@router.post("/decrypt")
+@router.post("/decryptions")
 async def decrypt_image_api(
     body: DecryptImageBody,
     auth: dict = Depends(get_auth),
