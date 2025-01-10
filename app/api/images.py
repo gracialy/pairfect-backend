@@ -99,8 +99,16 @@ async def pair_images(
         )
         log_timestamp("Storing pairing record")
         
-        # return result
-        return result
+        return {
+            'id': result['id'],
+            'original_image_uri': result['original_image_uri'],
+            'original_keyword': result['original_keyword'],
+            'result_image_uri': result['result_image_uri'],
+            'label_match': result['label_match'],
+            'color_match': result['color_match'],
+            'face_match': result['face_match'],
+            'overall_match': result['overall_match']
+        }
         
     except Exception as e:
         print(f"[{datetime.now()}] Error occurred: {str(e)}")
