@@ -309,7 +309,10 @@ class PairingService:
         result_labels: List[Dict],
         result_colors: List[Dict],
         result_faces: List[Dict],
-        percentage_match: float,
+        label_match: float,
+        color_match: float,
+        face_match: float,
+        overall_match: float,
         auth: dict
     ) -> Dict:
         """Store pairing record in Firestore."""
@@ -342,7 +345,10 @@ class PairingService:
                 'result_labels': result_labels,
                 'result_colors': result_colors,
                 'result_faces': result_faces,
-                'percentage_match': percentage_match
+                'label_match': label_match,
+                'color_match': color_match,
+                'face_match': face_match,
+                'overall_match': overall_match
             }
 
             # Add auth-specific data
@@ -365,13 +371,16 @@ class PairingService:
                 'original_image_uri': original_image_uri,
                 'original_keyword': original_keyword,
                 'result_image_uri': result_image_uri,
-                'original_labels': original_labels,
-                'original_colors': original_colors,
-                'original_faces': original_faces,
-                'result_labels': result_labels,
-                'result_colors': result_colors,
-                'result_faces': result_faces,
-                'percentage_match': percentage_match
+                # 'original_labels': original_labels,
+                # 'original_colors': original_colors,
+                # 'original_faces': original_faces,
+                # 'result_labels': result_labels,
+                # 'result_colors': result_colors,
+                # 'result_faces': result_faces,
+                # 'label_match': label_match,
+                'color_match': color_match,
+                'face_match': face_match,
+                'overall_match': overall_match
             }
             
         except Exception as e:
@@ -387,7 +396,7 @@ class PairingService:
         result_labels: List[Dict],
         result_colors: List[Dict],
         result_faces: List[Dict]
-    ) -> float:
+    ) -> tuple[float, float, float, float]:
         """Calculate percentage match between original and result images."""
         # Calculate label match percentage
         # Early return if no labels
@@ -401,15 +410,16 @@ class PairingService:
         else: color_match = self.calculate_color_match(original_colors, result_colors)
         
         # Calculate face match percentage
-        # if not original_faces and not result_faces:
-        #     face_match = 1.0
-        # else: face_match = self.calculate_face_match(original_faces, result_faces)
-        face_match = 1.0
+        if not original_faces and not result_faces:
+            face_match = 0.0
+            percentage = (label_match + color_match) / 2
+        else: 
+            face_match = self.calculate_face_match(original_faces, result_faces)
+            percentage = (label_match + color_match + face_match) / 3
         
-        # Calculate total match percentage
-        percentage = (label_match + color_match + face_match) / 3
+        print(label_match, color_match, face_match)
 
-        return percentage
+        return label_match, color_match, face_match, percentage
 
 
     def calculate_label_match(self, original_labels: List[Dict], result_labels: List[Dict]) -> float:
@@ -479,8 +489,19 @@ class PairingService:
             # Get records
             records = self.firebase.db.collection('image_pairings').where('user_id', '==', auth['uid']).stream()
             
-            # Convert records to list
-            result = [record.to_dict() for record in records]
+            # Convert records to list and filter required fields
+            result = [
+                {
+                    "id": record.id,
+                    "original_image_uri": record.get("original_image_uri"),
+                    "original_keyword": record.get("original_keyword"),
+                    "result_image_uri": record.get("result_image_uri"),
+                    "color_match": record.get("color_match"),
+                    "face_match": record.get("face_match"),
+                    "overall_match": record.get("overall_match")
+                }
+                for record in records
+            ]
             
             return result
         

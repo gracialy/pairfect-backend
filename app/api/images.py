@@ -70,7 +70,7 @@ async def pair_images(
         log_timestamp("Storage and analysis tasks")
 
         # Calculate percentage match
-        percentage_match = pairing_service.calculate_percentage_match(
+        label_match, color_match, face_match, overall_match = pairing_service.calculate_percentage_match(
             original_labels=original_labels,
             original_colors=original_colors,
             original_faces=original_faces,
@@ -91,7 +91,10 @@ async def pair_images(
             result_labels=result_labels,
             result_colors=result_colors,
             result_faces=result_faces,
-            percentage_match=percentage_match,
+            label_match=label_match,
+            color_match=color_match,
+            face_match=face_match,
+            overall_match=overall_match,
             auth=auth
         )
         log_timestamp("Storing pairing record")
@@ -105,6 +108,19 @@ async def pair_images(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error processing image pair: {str(e)}"
         )
+    
+@router.get("/pairs")
+async def get_pairing_records(
+    auth: dict = Depends(get_auth),
+    pairing_service: PairingService = Depends(get_pairing_service),
+):
+    """
+    Get all pairing records.
+    """
+    try:
+        return pairing_service.get_pairing_records(auth)
+    except Exception as e:
+        return {"error": str(e)}
     
 # Integration with External API
 ENCRYPT_API_URL = "https://furina-encryption-service.codebloop.my.id/api/encrypt"
@@ -147,19 +163,6 @@ async def encrypt_image_api(
 
         # Return encrypted data
         return response.json()
-    except Exception as e:
-        return {"error": str(e)}
-    
-@router.get("/pairs")
-async def get_pairing_records(
-    auth: dict = Depends(get_auth),
-    pairing_service: PairingService = Depends(get_pairing_service),
-):
-    """
-    Get all pairing records.
-    """
-    try:
-        return pairing_service.get_pairing_records(auth)
     except Exception as e:
         return {"error": str(e)}
 
