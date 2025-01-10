@@ -1,4 +1,3 @@
-import asyncio
 from datetime import datetime
 import json
 import uuid
@@ -266,42 +265,33 @@ class PairingService:
             
     async def store_image_to_storage(self, 
         content: bytes, 
-        result_image_url: str
-    ) -> Tuple[str, str]:
-        """Store original and pair image to Firebase Storage concurrently."""
+    ) -> str:
+        """Store original image to Firebase Storage."""
         original_image_id = str(uuid.uuid4())
-        result_image_id = str(uuid.uuid4())
 
         try:
             bucket = self.firebase.storage
 
-            async def store_original():
-                original_blob = bucket.blob(f"originals/{original_image_id}.jpg")
-                original_blob.upload_from_string(content, content_type='image/jpeg')
-                original_blob.make_public()
-                return original_blob.public_url
+            # Store original image
+            original_blob = bucket.blob(f"originals/{original_image_id}.jpg")
+            original_blob.upload_from_string(content, content_type='image/jpeg')
+            original_blob.make_public()
 
-            async def store_result():
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(result_image_url) as response:
-                        if response.status != 200:
-                            raise HTTPException(
-                                status_code=500,
-                                detail=f"Failed to download result image: {await response.text()}"
-                            )
-                        result_image_content = await response.read()
-                        result_blob = bucket.blob(f"results/{result_image_id}.jpg")
-                        result_blob.upload_from_string(result_image_content, content_type='image/jpeg')
-                        result_blob.make_public()
-                        return result_blob.public_url
+            # # Store result image
+            # async with aiohttp.ClientSession() as session:
+            #     async with session.get(result_image_url) as response:
+            #         if response.status != 200:
+            #             raise HTTPException(
+            #                 status_code=500,
+            #                 detail=f"Failed to download result image: {await response.text()}"
+            #             )
 
-            # Run both storage operations concurrently
-            original_url, result_url = await asyncio.gather(
-                store_original(),
-                store_result()
-            )
+            #         result_image_content = await response.read()
+            #         result_blob = bucket.blob(f"results/{result_image_id}.jpg")
+            #         result_blob.upload_from_string(result_image_content, content_type='image/jpeg')
+            #         result_blob.make_public()
 
-            return original_url, result_url
+            return original_blob.public_url
 
         except Exception as e:
             raise HTTPException(
@@ -482,6 +472,23 @@ class PairingService:
         percentage = total_similarity / len(original_set)
 
         return percentage
+    
+    def get_pairing_records(self, auth: dict) -> List[Dict]:
+        """Retrieve pairing records from Firestore."""
+        try:
+            # Get records
+            records = self.firebase.db.collection('image_pairings').where('user_id', '==', auth['uid']).stream()
+            
+            # Convert records to list
+            result = [record.to_dict() for record in records]
+            
+            return result
+        
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to retrieve pairing records: {str(e)}"
+            )
 
 @lru_cache()
 def get_pairing_service() -> PairingService:

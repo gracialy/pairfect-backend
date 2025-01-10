@@ -36,7 +36,7 @@ async def login(user: SessionBody):
     }
 
 @router.delete("")
-async def logout(current_user: dict = Depends(get_current_user), status_code=status.HTTP_204_NO_CONTENT):
+async def logout(current_user: dict = Depends(get_current_user)):
     try:
         auth.revoke_refresh_tokens(current_user['uid'])
         return {
